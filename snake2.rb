@@ -7,18 +7,18 @@ class Board
 
   def initialize(height, width)
     @height, @width = height, width
-    @snake = Snake.new(2, 2)
+    @snake = Snake.new(2, 2, "right")
     @win = Window.new(height, width * 2, 0, 0)
+    noecho
     win.nodelay = true
-    win.box("#", "#")
   end
 
   def tick
     while true
-      # input = read_input
-      snake.move_right
+      input = read_input
+      move_snake(input)
       redraw
-      sleep 1
+      sleep 0.5
     end
   end
 
@@ -49,6 +49,8 @@ class Board
       snake.move_up
     when "s"
       snake.move_down
+    else
+      snake.move_forward
     end
   end
 end
@@ -56,29 +58,23 @@ end
 class Snake
   attr_reader :positions
 
-  def initialize(initial_x, initial_y)
-    @positions = [[initial_x, initial_y]]
-  end
-
-  def add_to_board(positions_map)
-    positions_map = positions_map.dup
-    positions.each do |x, y|
-      positions_map[[x,y]] = "+ "
-    end
-    positions_map
+  def initialize(initial_x, initial_y, direction)
+    @positions, @direction= [[initial_x, initial_y]], direction
   end
 
   def move_up
     x, y = head
-    positions.unshift [x, y + 1]
+    positions.unshift [x, y - 1]
     positions.pop
+    @direction = "up"
     positions
   end
 
   def move_down
     x, y = head
-    positions.unshift [x, y - 1]
+    positions.unshift [x, y + 1]
     positions.pop
+    @direction = "down"
     positions
   end
 
@@ -86,6 +82,7 @@ class Snake
     x, y = head
     positions.unshift [x + 1, y]
     positions.pop
+    @direction = "right"
     positions
   end
 
@@ -93,7 +90,12 @@ class Snake
     x, y = head
     positions.unshift [x - 1, y]
     positions.pop
+    @direction = "left"
     positions
+  end
+
+  def move_forward
+    send :"move_#{@direction}"
   end
 
   def head
