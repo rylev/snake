@@ -3,12 +3,13 @@ require "curses"
 class Board
   include Curses
 
-  attr_reader :height, :width, :snake, :win
+  attr_reader :height, :width, :snake, :win, :apple
 
   def initialize(height, width)
     @height, @width = height, width
     @snake = Snake.new(2, 2, "right")
     @win = Window.new(height, width * 2, 0, 0)
+    @apple = Apple.new(10, 15)
     noecho
     win.nodelay = true
   end
@@ -17,23 +18,38 @@ class Board
     while true
       input = read_input
       move_snake(input)
+      detect_collision
       redraw
       sleep 0.5
     end
   end
 
   def redraw
-    win.refresh
-    win.clear
-    win.box("#", "#")
+    refresh_board
     snake.positions.each do |pos|
       x, y = pos
       win.setpos(y, x)
       win.addstr("+")
     end
+    apple_x, apple_y = apple.position
+    win.setpos(apple_y, apple_x)
+    win.addstr("*")
   end
 
   private
+
+  def detect_collision
+    if apple.position == snake.head
+      snake.grow
+      apple.new_position
+    end
+  end
+
+  def refresh_board
+    win.refresh
+    win.clear
+    win.box("#", "#")
+  end
 
   def read_input
     win.getch
@@ -65,7 +81,7 @@ class Snake
   def move_up
     x, y = head
     positions.unshift [x, y - 1]
-    positions.pop
+    move_tail
     @direction = "up"
     positions
   end
@@ -73,7 +89,7 @@ class Snake
   def move_down
     x, y = head
     positions.unshift [x, y + 1]
-    positions.pop
+    move_tail
     @direction = "down"
     positions
   end
@@ -81,7 +97,7 @@ class Snake
   def move_right
     x, y = head
     positions.unshift [x + 1, y]
-    positions.pop
+    move_tail
     @direction = "right"
     positions
   end
@@ -89,7 +105,7 @@ class Snake
   def move_left
     x, y = head
     positions.unshift [x - 1, y]
-    positions.pop
+    move_tail
     @direction = "left"
     positions
   end
@@ -100,6 +116,31 @@ class Snake
 
   def head
     positions.first
+  end
+
+  def grow
+    @growing = true
+  end
+
+  def growing?
+    !!@growing
+  end
+
+  def move_tail
+    positions.pop unless growing?
+    @growing = false
+  end
+end
+
+class Apple
+  attr_reader :position
+
+  def initialize(initial_x, initial_y)
+    @position = [initial_x, initial_y]
+  end
+
+  def new_position
+    @position = [16, 2]
   end
 end
 
