@@ -6,12 +6,12 @@ class Board
   attr_reader :height, :width, :snake, :win, :apple
 
   def initialize(height, width)
-    @height, @width = height, width
+    @height, @width = height, width * 2
+    @win = Window.new(@height, @width, 0, 0)
     @snake = Snake.new(2, 2, "right")
-    @win = Window.new(height, width * 2, 0, 0)
     @apple = Apple.new(10, 15)
     noecho
-    win.nodelay = true
+    @win.nodelay = true
   end
 
   def tick
@@ -26,14 +26,8 @@ class Board
 
   def redraw
     refresh_board
-    snake.positions.each do |pos|
-      x, y = pos
-      win.setpos(y, x)
-      win.addstr("+")
-    end
-    apple_x, apple_y = apple.position
-    win.setpos(apple_y, apple_x)
-    win.addstr("*")
+    snake.draw(win)
+    apple.draw(win)
   end
 
   private
@@ -41,7 +35,7 @@ class Board
   def detect_collision
     if apple.position == snake.head
       snake.grow
-      apple.new_position
+      apple.new_position(self)
     end
   end
 
@@ -83,7 +77,6 @@ class Snake
     positions.unshift [x, y - 1]
     move_tail
     @direction = "up"
-    positions
   end
 
   def move_down
@@ -91,7 +84,6 @@ class Snake
     positions.unshift [x, y + 1]
     move_tail
     @direction = "down"
-    positions
   end
 
   def move_right
@@ -99,7 +91,6 @@ class Snake
     positions.unshift [x + 1, y]
     move_tail
     @direction = "right"
-    positions
   end
 
   def move_left
@@ -107,11 +98,18 @@ class Snake
     positions.unshift [x - 1, y]
     move_tail
     @direction = "left"
-    positions
   end
 
   def move_forward
     send :"move_#{@direction}"
+  end
+
+  def draw(window)
+    positions.each do |pos|
+      x, y = pos
+      window.setpos(y, x)
+      window.addstr("+")
+    end
   end
 
   def head
@@ -139,8 +137,23 @@ class Apple
     @position = [initial_x, initial_y]
   end
 
-  def new_position
-    @position = [16, 2]
+  def new_position(board)
+    new_x = (1..board.width - 1).to_a.sample
+    new_y = (1..board.height - 1).to_a.sample
+    @position = [new_x, new_y]
+  end
+
+  def draw(window)
+    window.setpos(y, x)
+    window.addstr("*")
+  end
+
+  def x
+    position.first
+  end
+
+  def y
+    position.last
   end
 end
 
