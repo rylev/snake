@@ -1,22 +1,36 @@
 require "curses"
 
+class Position
+  attr_reader :x, :y
+  def initialize(x, y)
+    @x, @y = x, y
+  end
+
+  def ==(other)
+    other.x == x && other.y == y
+  end
+end
 class Board
   include Curses
 
-  attr_reader :height, :width, :snake, :win, :apple
+  attr_reader :height, :width, :snake, :window, :apple
 
   def initialize(height, width)
     @height, @width = height, width * 2
-    @win = Window.new(@height, @width, 0, 0)
-    noecho
-    curs_set(0)
-    @win.nodelay = true
+    @window = initialize_window
+    @window.nodelay = true
     set_board
   end
 
+  def initialize_window
+    noecho
+    curs_set(0)
+    Window.new(@height, @width, 0, 0)
+  end
+
   def set_board
-    @snake = Snake.new(2, 2, "right")
-    @apple = Apple.new(10, 15)
+    @snake = Snake.new(self, Position.new(2, 2), "right")
+    @apple = Apple.new(self, Position.new(10, 15))
   end
   alias reset_board set_board
 
@@ -25,10 +39,9 @@ class Board
       input = read_input
       move_snake(input)
       if apple.position == snake.head
-        snake.grow
-        apple.new_position(self)
+        snake.eat(apple)
         redraw
-      elsif snake.touching_itself? || snake.touching_border?(self)
+      elsif snake.touching_itself? || snake.touching_border?
         end_game
         reset_board
       else
@@ -39,8 +52,8 @@ class Board
 
   def redraw
     refresh_board
-    snake.draw(win)
-    apple.draw(win)
+    snake.draw
+    apple.draw
     sleep 0.2
   end
 
@@ -53,8 +66,8 @@ class Board
   end
 
   def center(string)
-    win.setpos(height / 2 - 2, width / 2 - 7)
-    win.addstr(string)
+    window.setpos(height / 2 - 2, width / 2 - 7)
+    window.addstr(string)
   end
 
   def top_edge
@@ -76,17 +89,17 @@ class Board
   private
 
   def clear_board
-    win.refresh
-    win.clear
+    window.refresh
+    window.clear
   end
 
   def refresh_board
     clear_board
-    win.box("#", "#")
+    window.box("#", "#")
   end
 
   def read_input
-    win.getch
+    window.getch
   end
 
   def move_snake(input_char)
@@ -106,60 +119,70 @@ class Board
 end
 
 class Snake
-  attr_reader :positions
+  attr_reader :positions, :board
 
-  def initialize(initial_x, initial_y, direction)
-    @positions, @direction= [[initial_x, initial_y]], direction
+  def initialize(board, initial_position, intial_direction)
+    @board, @positions, @direction= board, [initial_position], intial_direction
   end
 
   def move_up
-    x, y = head
-    positions.unshift [x, y - 1]
-    move_tail
-    @direction = "up"
+    if @direction == "down"
+      move_down
+    else
+      positions.unshift Position.new(head.x, head.y - 1)
+      move_tail
+      @direction = "up"
+    end
   end
 
   def move_down
-    x, y = head
-    positions.unshift [x, y + 1]
-    move_tail
-    @direction = "down"
+    if @direction == "up"
+      move_up
+    else
+      positions.unshift Position.new(head.x, head.y + 1)
+      move_tail
+      @direction = "down"
+    end
   end
 
   def move_right
-    x, y = head
-    positions.unshift [x + 1, y]
-    move_tail
-    @direction = "right"
+    if @direction == "left"
+      move_left
+    else
+      positions.unshift Position.new(head.x + 1, head.y)
+      move_tail
+      @direction = "right"
+    end
   end
 
   def move_left
-    x, y = head
-    positions.unshift [x - 1, y]
-    move_tail
-    @direction = "left"
+    if @direction == "right"
+      move_right
+    else
+      positions.unshift Position.new(head.x - 1, head.y)
+      move_tail
+      @direction = "left"
+    end
   end
 
   def move_forward
     send :"move_#{@direction}"
   end
 
-  def draw(window)
+  def draw
     positions.each do |pos|
-      x, y = pos
-      window.setpos(y, x)
-      window.addstr("+")
+      board.window.setpos(pos.y, pos.x)
+      board.window.addstr("+")
     end
   end
 
   def touching_itself?
-    _, *rest_of_tail = *tail
-    rest_of_tail.include?(head)
+    tail.uniq.include? head
   end
 
-  def touching_border?(board)
-    x, y = head
-    x == board.right_edge || x == board.left_edge || y == board.top_edge || y == board.bottom_edge
+  def touching_border?
+    head.x == board.right_edge || head.x == board.left_edge ||
+      head.y == board.top_edge || head.y == board.bottom_edge
   end
 
   def head
@@ -184,32 +207,37 @@ class Snake
     positions.pop unless growing?
     @growing = false
   end
+
+  def eat(apple)
+    grow
+    apple.new_position
+  end
 end
 
 class Apple
-  attr_reader :position
+  attr_reader :position, :board
 
-  def initialize(initial_x, initial_y)
-    @position = [initial_x, initial_y]
+  def initialize(board, initial_position)
+    @board, @position = board, initial_position
   end
 
-  def new_position(board)
-    new_x = (1..board.width - 1).to_a.sample
-    new_y = (1..board.height - 1).to_a.sample
-    @position = [new_x, new_y]
+  def new_position
+    new_x = ((board.left_edge + 1)..(board.right_edge - 1)).to_a.sample
+    new_y = ((board.top_edge + 1)..(board.bottom_edge - 1)).to_a.sample
+    @position = Position.new(new_x, new_y)
   end
 
-  def draw(window)
-    window.setpos(y, x)
-    window.addstr("*")
+  def draw
+    board.window.setpos(y, x)
+    board.window.addstr("*")
   end
 
   def x
-    position.first
+    position.x
   end
 
   def y
-    position.last
+    position.y
   end
 end
 
