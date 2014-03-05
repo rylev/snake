@@ -7,7 +7,7 @@ module Snake
   class Board
     include Curses
 
-    attr_reader :height, :width, :snake, :window, :apple
+    attr_reader :height, :width, :snake, :apple, :window
 
     def initialize(height, width)
       @height, @width = height, width * 2
@@ -16,22 +16,9 @@ module Snake
       set_board
     end
 
-    def initialize_window
-      noecho
-      curs_set(0)
-      Window.new(@height, @width, 0, 0)
-    end
-
-    def set_board
-      @snake = Snake.new(self, Position.new(2, 2), "right")
-      @apple = Apple.new(self, Position.new(10, 15))
-    end
-    alias reset_board set_board
-
     def tick
       while true
-        input = read_input
-        move_snake(input)
+        move_snake(read_input)
         if apple.position == snake.head
           snake.eat(apple)
           redraw
@@ -43,6 +30,24 @@ module Snake
         end
       end
     end
+
+    def top_edge
+      0
+    end
+
+    def bottom_edge
+      height - 1
+    end
+
+    def left_edge
+      0
+    end
+
+    def right_edge
+      width - 1
+    end
+
+    private
 
     def redraw
       refresh_board
@@ -64,23 +69,17 @@ module Snake
       window.addstr(string)
     end
 
-    def top_edge
-      0
+    def set_board
+      @snake = Snake.new(self, Position.new(2, 2), "right")
+      @apple = Apple.new(self, Position.new(10, 15))
     end
+    alias reset_board set_board
 
-    def bottom_edge
-      height - 1
+    def initialize_window
+      noecho
+      curs_set(0)
+      Window.new(@height, @width, 0, 0)
     end
-
-    def left_edge
-      0
-    end
-
-    def right_edge
-      width - 1
-    end
-
-    private
 
     def clear_board
       window.refresh
