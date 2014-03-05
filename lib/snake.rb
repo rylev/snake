@@ -9,6 +9,7 @@ class Board
     @height, @width = height, width * 2
     @win = Window.new(@height, @width, 0, 0)
     noecho
+    curs_set(0)
     @win.nodelay = true
     set_board
   end
@@ -33,7 +34,6 @@ class Board
       else
         redraw
       end
-      sleep 0.5
     end
   end
 
@@ -41,36 +41,47 @@ class Board
     refresh_board
     snake.draw(win)
     apple.draw(win)
+    sleep 0.2
   end
 
-  def end_game
-    4.times do
-      refresh_board
-      win.addstr("Game Over!")
+  def end_game(counter = 10)
+    counter.times do |i|
+      clear_board
+      center("Game Over! Restart in #{10 - i}")
+      sleep 1
     end
   end
 
-  def top_coord
+  def center(string)
+    win.setpos(height / 2 - 2, width / 2 - 7)
+    win.addstr(string)
+  end
+
+  def top_edge
     0
   end
 
-  def bottom_coord
-    height
+  def bottom_edge
+    height - 1
   end
 
-  def left_coord
+  def left_edge
     0
   end
 
-  def right_coord
-    width
+  def right_edge
+    width - 1
   end
 
   private
 
-  def refresh_board
+  def clear_board
     win.refresh
     win.clear
+  end
+
+  def refresh_board
+    clear_board
     win.box("#", "#")
   end
 
@@ -148,7 +159,7 @@ class Snake
 
   def touching_border?(board)
     x, y = head
-    x == board.right_coord || x == board.left_coord || y == board.top_coord || y == board.bottom_coord
+    x == board.right_edge || x == board.left_edge || y == board.top_edge || y == board.bottom_edge
   end
 
   def head
