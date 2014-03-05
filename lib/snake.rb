@@ -8,18 +8,31 @@ class Board
   def initialize(height, width)
     @height, @width = height, width * 2
     @win = Window.new(@height, @width, 0, 0)
-    @snake = Snake.new(2, 2, "right")
-    @apple = Apple.new(10, 15)
     noecho
     @win.nodelay = true
+    set_board
   end
+
+  def set_board
+    @snake = Snake.new(2, 2, "right")
+    @apple = Apple.new(10, 15)
+  end
+  alias reset_board set_board
 
   def tick
     while true
       input = read_input
       move_snake(input)
-      detect_collision
-      redraw
+      if apple.position == snake.head
+        snake.grow
+        apple.new_position(self)
+        redraw
+      elsif snake.touching_itself? || snake.touching_border?(self)
+        end_game
+        reset_board
+      else
+        redraw
+      end
       sleep 0.5
     end
   end
@@ -30,14 +43,30 @@ class Board
     apple.draw(win)
   end
 
-  private
-
-  def detect_collision
-    if apple.position == snake.head
-      snake.grow
-      apple.new_position(self)
+  def end_game
+    4.times do
+      refresh_board
+      win.addstr("Game Over!")
     end
   end
+
+  def top_coord
+    0
+  end
+
+  def bottom_coord
+    height
+  end
+
+  def left_coord
+    0
+  end
+
+  def right_coord
+    width
+  end
+
+  private
 
   def refresh_board
     win.refresh
@@ -112,8 +141,24 @@ class Snake
     end
   end
 
+  def touching_itself?
+    _, *rest_of_tail = *tail
+    rest_of_tail.include?(head)
+  end
+
+  def touching_border?(board)
+    x, y = head
+    x == board.right_coord || x == board.left_coord || y == board.top_coord || y == board.bottom_coord
+  end
+
   def head
-    positions.first
+    head, _ = *positions
+    head
+  end
+
+  def tail
+    _, *tail = *positions
+    tail
   end
 
   def grow
