@@ -3,7 +3,7 @@ module Snake
     attr_reader :positions, :board
 
     def initialize(board, initial_position, intial_direction)
-      @board, @positions, @direction= board, [initial_position], intial_direction
+      @board, @positions, @direction = board, [initial_position], intial_direction
     end
 
     def move_up
