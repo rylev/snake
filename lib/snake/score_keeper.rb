@@ -12,8 +12,4 @@ class ScoreKeeper
   def reset
     @score = 0
   end
-
-  def draw
-
-  end
 end

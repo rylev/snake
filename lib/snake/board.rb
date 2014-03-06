@@ -56,7 +56,6 @@ module Snake
       refresh_board
       snake.draw
       apple.draw
-      score_keeper.draw
       sleep 0.2
     end
 
