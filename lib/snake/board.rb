@@ -2,17 +2,19 @@ require "curses"
 require "snake"
 require "apple"
 require "position"
+require "score_keeper"
 
 module Snake
   class Board
     include Curses
 
-    attr_reader :height, :width, :snake, :apple, :window
+    attr_reader :height, :width, :snake, :apple, :window, :score_keeper
 
     def initialize(height, width)
       @height, @width = height, width * 2
       @window = initialize_window
       @window.nodelay = true
+      @score_keeper = ScoreKeeper.new
       set_board
     end
 
@@ -21,6 +23,7 @@ module Snake
         move_snake(read_input)
         if apple.position == snake.head
           snake.eat(apple)
+          score_keeper.increment
           redraw
         elsif snake.touching_itself? || snake.touching_border?
           end_game
@@ -53,15 +56,17 @@ module Snake
       refresh_board
       snake.draw
       apple.draw
+      score_keeper.draw
       sleep 0.2
     end
 
     def end_game(counter = 10)
       counter.times do |i|
         clear_board
-        center("Game Over! Restart in #{10 - i}")
+        center("Game Over! Restart in #{10 - i}. Score: #{score_keeper.score}")
         sleep 1
       end
+      score_keeper.reset
     end
 
     def center(string)
